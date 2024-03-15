@@ -1,0 +1,179 @@
+\documentclass[a4paper]{exam}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{pythonhighlight}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+\printanswers
+
+\begin{document}
+\begin{center}
+{\Large \textbf{Spring 2024}}\vspace{1.0em}\\
+{\Large \textbf{CS 412 (Algorithms: Design and Analysis)}}\vspace{1.0em}\\
+{\Large \textbf{Weekly Challenge 07: Maximum Flows}}\vspace{1.0em}\\
+{\Large Announced: Friday, March 1, 2024.}\\
+\vspace{.25em}
+{\Large Deadline: Friday, March 15, 2024 (11:59 pm PKT).}\\ 
+\vspace{.3em}
+{\Large Total marks: 2.}
+\vspace{.5em}\\
+\end{center}
+\textbf{Instructions}: Submit \textbf{individually} your solution as a PDF with the file name as your $studentID.pdf$; typeset in LaTeX. You must submit your solution on Canvas.
+
+\centerline{\rule{.7\textwidth}{1pt}}
+\begin{questions}
+\question[1]
+  We are going to write a class \pyth{MaxFlow} in a file \texttt{maxflow.py}. Objects of the class will take in a flow network and compute its maximum flow. Your code will be tested by \pyth{pytest} using the file, \texttt{test\_maxflow.py}, given in \texttt{WC7\_MaxFlows.zip}. To test your implementation of \pyth{MaxFlow}, open the directory containing \texttt{test\_maxflow.py} and \texttt{maxflow.py} in the terminal, and run the following command:
+\begin{lstlisting}[language=bash]
+pytest test_maxflow.py
+\end{lstlisting}
+  \textbf{TASKS}:
+  \begin{parts}
+  \part The \pyth{__init__} method of \pyth{MaxFlow} takes as argument a \pyth{file} object which points to a file containing a flow network, $G$, in the following format.
+    \begin{itemize}
+    \item The first line contains the number of edges, $e$.
+    \item Each of the next $e$ lines contains an edge in the format $u\ v\ c$ where $(u,v)$ is an edge in $G$ with capacity $c$.
+    \item The source vertex is always named, $s$, and the sink vertex is always named, $t$.
+    \item All capacities are integral and positive.
+    \end{itemize}
+  \part The \pyth{get_value} method returns the value of the maximum flow on $G$.
+  \part The \pyth{get_flow} method returns the maximum flow on $G$ as a \pyth{dict} object. A key in the returned \pyth{dict} object is an edge, $(u,v)$ in the maximum flow and the value is the amount of flow along $(u,v)$. Only edges with non-zero flow are included.
+  \part Ensure that all tests pass by running \pyth{pytest} locally.
+  \part Do not include any external packages except \pyth{networkx} for the possible use of \href{https://networkx.org/documentation/stable/reference/classes/digraph.html}{\pyth{networkx.DiGraph}} to store and operate on the flow network.
+  \part You may modify the error messages in \texttt{test\_maxflow.py} to convey more information if you wish, but you may not alter any other functionality in it.
+  \end{parts}
+
+  
+  \begin{solution}
+    \begin{lstlisting}[language=Python, caption={Python code for MaxFlow class with Ford-Fulkerson algorithm.}, label={lst:maxflow}]
+      import networkx as nx
+      
+      def _dfs(graph, source, sink):
+          """
+          Depth-First Search (DFS) function to find a path from the source to the sink in the graph.
+          """
+          stack, visited = [(source, [source])], {source}
+      
+          while stack:
+              u, path = stack.pop()
+              if u == sink:
+                  return path
+              for v in graph[u]:
+                  if v not in visited and graph[u][v]['capacity'] > 0:
+                      visited.add(v)
+                      stack.append((v, path + [v]))
+          return []
+      
+      class MaxFlow:
+          def __init__(self, file) -> None:
+              """
+              Initialize the MaxFlow class with a flow network provided in the given file.
+              """
+              self.graph = nx.DiGraph()
+              self._read_flow_network(file)
+              self.residual_graph = self.graph.copy()  # Create a copy of the graph for the residual network
+      
+          def _read_flow_network(self, file):
+              """
+              Read the flow network from the file and populate the graph.
+              """
+              for line in file:
+                  u, v, capacity = line.split()
+                  self.graph.add_edge(u, v, capacity=int(capacity))
+      
+          def get_value(self):
+              """
+              Compute the maximum flow in the flow network using the Ford-Fulkerson algorithm.
+              """
+              source, sink, max_flow = 's', 't', 0
+      
+              path = _dfs(self.graph, source, sink)
+      
+              while path:
+                  bottleneck_capacity = float('inf')
+      
+                  # Find the bottleneck capacity along the augmenting path
+                  for index in range(len(path) - 1):
+                      u, v = path[index], path[index + 1]
+                      capacity = self.residual_graph[u][v]['capacity']
+                      bottleneck_capacity = min(bottleneck_capacity, capacity)
+      
+                  # Update the residual capacities and augment the flow along the path
+                  for index in range(len(path) - 1):
+                      u, v = path[index], path[index + 1]
+                      residual_capacity = self.residual_graph[u][v]['capacity'] - bottleneck_capacity
+      
+                      # Update the residual capacities in the residual graph
+                      if not residual_capacity:
+                          self.residual_graph.remove_edge(u, v)
+                      else:
+                          self.residual_graph[u][v]['capacity'] = residual_capacity
+      
+                      # Add reverse edges and update their capacities
+                      if not self.residual_graph.has_edge(v, u):
+                          self.residual_graph.add_edge(v, u, capacity=0)
+                      self.residual_graph[v][u]['capacity'] += bottleneck_capacity
+      
+                  # Update the maximum flow
+                  max_flow += bottleneck_capacity
+      
+                  # Find the next augmenting path
+                  path = _dfs(self.residual_graph, source, sink)
+      
+              return max_flow
+      
+          def get_flow(self):
+              """
+              Compute the flow on each edge in the flow network.
+              """
+              flow_dict = {}
+              for u, v in self.graph.edges():
+                  if self.residual_graph.has_edge(u, v):
+                      # Calculate flow by subtracting residual capacity from original capacity
+                      flow = self.graph[u][v]['capacity'] - self.residual_graph[u][v]['capacity']
+                  else:
+                      flow = self.graph[u][v]['capacity']
+      
+                  # Add non-zero flows to the dictionary
+                  if flow > 0:
+                      flow_dict[(u, v)] = flow
+              return flow_dict
+      \end{lstlisting}
+      
+  \end{solution}
+\end{questions}
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
