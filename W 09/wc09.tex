@@ -1,0 +1,134 @@
+\documentclass[a4paper]{exam}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amsfonts}
+\usepackage{pythonhighlight}
+\usepackage{graphicx} %package to manage images
+\graphicspath{ {./images/} }
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{float}
+\lstdefinestyle{pseudocode}{
+    language=,
+    basicstyle=\ttfamily,
+    keywordstyle=\bfseries,
+    commentstyle=\itshape,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=4
+}
+
+\printanswers
+\begin{document}
+\begin{center}
+{\Large \textbf{Spring 2024}}\vspace{1.0em}\\
+{\Large \textbf{CS 412 (Algorithms: Design and Analysis)}}\vspace{1.0em}\\
+{\Large \textbf{Weekly Challenge 03: Dynamic Programming}}\vspace{1.0em}\\
+{\Large Announced: Friday, March 29, 2024.}\\
+\vspace{.25em}
+{\Large Deadline: Friday, April 12 , 2024 (11:59 pm PKT).}\\ 
+\vspace{.3em}
+{\Large Total marks: 2.}
+\vspace{.5em}\\
+\end{center}
+\textbf{Instructions}: Submit \textbf{individually} your solution as a PDF with the file name as your $studentID.pdf$; typeset in LaTeX. You must submit your solution on Canvas.
+
+\centerline{\rule{.7\textwidth}{1pt}}
+\begin{questions}
+\question[1]
+In compilers, the lexical analyzer scans the input source code character by character. When it encounters whitespace characters, it discards them without creating tokens. Whitespace characters do not contribute to the code's meaning and are often used for formatting and readability purposes only. After removing whitespace, the lexical analyzer continues to tokenize the remaining non-whitespace characters in the source code, identifying keywords, identifiers, literals, operators, and other language constructs.
+
+The lexical analyzer generates the sequence of tokens (without spaces) as an output. Consider the following pair of correct and incorrect programming language statements represented as a sequence of tokens, and devise a dynamic programming algorithm to identify the minimum number of edits required to transform an incorrect sequence to the correct sequence.
+
+\textbf{Incorrect sequence}: \lstinline{<int><int><;>}\\
+\textbf{Correct sequence}: \lstinline{<int><var><.>}
+
+\begin{enumerate}
+    \item Identify whether the problem has an optimal substructure property.
+    \item Identify the smallest subproblem.
+    \item Formulate a dynamic programming algorithm to solve the problem.
+    \item Generate a dynamic programming table for the given problem.
+\end{enumerate}
+
+% Add your solution here
+\begin{solution}
+
+    \begin{enumerate}
+        \item The problem does have an optimal substructure, because the minimum number of edits needed to transform the incorrect sequence to the correct one can be broken down into smaller subproblems, and the solution to the larger subproblem can be constructed from the smaller subproblems.
+        \item The smallest subproblem is transforming a single element of the incorrect sequence to the corresponding element of the correct sequence. The simplest subproblem would be when one of the strings is empty, so the number of edits will be the length of the non-empty sequence. 
+        \item We can create a dp table where dp[i][j] represents the minimum number of edits required to transform the first i elements of the incorrect sequence to the first j elements of the correct sequence.
+        \begin{lstlisting}[style=pseudocode, caption={Dynamic Programming Solution}, label={lst:dynprog}]
+function minEdits(incorrect, correct):
+    n = length(incorrect)
+    m = length(correct)
+    
+    // Initialize dynamic programming table
+    dp = 2D array of size (n+1) x (m+1)
+    
+    // Base case: Initialize the first row and column
+    for i from 0 to n:
+        dp[i][0] = i
+    for j from 0 to m:
+        dp[0][j] = j
+    
+    // Fill the dynamic programming table
+    for i from 1 to n:
+        for j from 1 to m:
+            if incorrect[i] = correct[j]:
+                dp[i][j] = dp[i-1][j-1]  // Characters match, no edit required
+            else:
+                dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
+                // Choose the minimum edit operation:
+                // - Replace incorrect[i] with correct[j]
+                // - Delete incorrect[i]
+                // - Insert correct[j] after incorrect[i-1]
+    
+    // Return the minimum number of edits to transform the entire sequence
+    return dp[n][m]
+            \end{lstlisting}
+            
+        \item The following is the table: \\
+        \begin{table}[H]
+            \centering
+            \caption{Dynamic Programming Table}
+            \label{tab:dp_table}
+            \begin{tabular}{|c|*{8}{c|}}
+                \hline
+                \multicolumn{2}{|c|}{} & C & o & r & r & e & c & t \\
+                \hline
+                \multicolumn{2}{|c|}{} & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+                \hline
+                & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\
+                \cline{2-9}
+                i & 1 & 0 & 1 & 2 & 3 & 4 & 5 & 6 \\
+                \cline{2-9}
+                n & 2 & 1 & 1 & 2 & 3 & 4 & 5 & 6 \\
+                \cline{2-9}
+                c & 3 & 2 & 2 & 1 & 2 & 3 & 4 & 5 \\
+                \cline{2-9}
+                o & 4 & 3 & 3 & 2 & 1 & 2 & 3 & 4 \\
+                \cline{2-9}
+                r & 5 & 4 & 4 & 3 & 2 & 1 & 2 & 3 \\
+                \cline{2-9}
+                r & 6 & 5 & 5 & 4 & 3 & 2 & 1 & 2 \\
+                \cline{2-9}
+                e & 7 & 6 & 6 & 5 & 4 & 3 & 2 & 1 \\
+                \cline{2-9}
+                c & 8 & 7 & 7 & 6 & 5 & 4 & 3 & 2 \\
+                \cline{2-9}
+                t & 9 & 8 & 8 & 7 & 6 & 5 & 4 & 3 \\
+                \cline{2-9}
+                ; & 10 & 9 & 9 & 8 & 7 & 6 & 5 & 4 \\
+                \hline
+            \end{tabular}
+        \end{table}
+        Here, the cell dp[i][j]  represents the minimum number of edits required to transform the prefix of the incorrect sequence 
+        incorrect[1..i] to match the prefix of the correct sequence correct[1..j].
+    \end{enumerate}
+
+\end{solution}
+
+\end{questions}
+\end{document}
